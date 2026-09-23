@@ -1,0 +1,305 @@
+:root {
+  --bg: #ffffff;
+  --bg-side: #f6f7f9;
+  --bg-bar: #eef0f3;
+  --fg: #1f2328;
+  --fg-muted: #656d76;
+  --border: #d8dce1;
+  --accent: #2563eb;
+  --hover: rgba(0, 0, 0, 0.05);
+  --active: rgba(37, 99, 235, 0.12);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1f22;
+    --bg-side: #25272b;
+    --bg-bar: #2b2d31;
+    --fg: #e3e5e8;
+    --fg-muted: #9aa0a8;
+    --border: #3a3d42;
+    --accent: #6ea0ff;
+    --hover: rgba(255, 255, 255, 0.06);
+    --active: rgba(110, 160, 255, 0.18);
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Malgun Gothic',
+    'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+body.resizing,
+body.resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---------------- 툴바 ---------------- */
+
+#toolbar {
+  flex: 0 0 38px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: var(--bg-bar);
+  border-bottom: 1px solid var(--border);
+}
+
+#toolbar button,
+.explorer-empty button {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+#toolbar button:hover,
+.icon-btn:hover {
+  background: var(--hover);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  padding: 0 !important;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#doc-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#doc-title .dirty {
+  margin-left: 6px;
+  color: var(--accent);
+}
+
+body.browser-mode #btn-open,
+body.browser-mode #btn-save {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ---------------- 3분할 ---------------- */
+
+#main {
+  --side-w: 240px;
+  --side-eff: calc(var(--side-w) + 4px);
+  --ratio: 0.5;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+#main.no-sidebar {
+  --side-eff: 0px;
+}
+
+#sidebar {
+  flex: 0 0 var(--side-w);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-side);
+}
+
+#editor-pane {
+  flex: 0 0 calc((100% - var(--side-eff) - 4px) * var(--ratio));
+  min-width: 0;
+  overflow: hidden;
+}
+
+#preview-pane {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#preview-scroll {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+}
+
+.gutter {
+  flex: 0 0 4px;
+  background: var(--border);
+  cursor: col-resize;
+  transition: background 0.15s;
+}
+
+.gutter:hover {
+  background: var(--accent);
+}
+
+#main.no-sidebar #sidebar,
+#main.no-sidebar #gutter-side,
+#main.no-editor #editor-pane,
+#main.no-editor #gutter-mid {
+  display: none;
+}
+
+/* ---------------- 탐색기 ---------------- */
+
+.explorer-head {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 6px 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.explorer-title {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.explorer-tree {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 20px;
+}
+
+.explorer-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding-right: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.node:hover {
+  background: var(--hover);
+}
+
+.node.active {
+  background: var(--active);
+  color: var(--accent);
+}
+
+.node .icon {
+  display: inline-flex;
+  width: 14px;
+  flex: 0 0 14px;
+  color: var(--fg-muted);
+}
+
+.node.dir .icon svg {
+  transition: transform 0.1s;
+}
+
+.node.dir.open .icon svg {
+  transform: rotate(90deg);
+}
+
+.node .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node.error,
+.node.empty {
+  padding: 8px 12px;
+  height: auto;
+  color: var(--fg-muted);
+  white-space: normal;
+  cursor: default;
+}
+
+.explorer-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--fg-muted);
+}
+
+.explorer-empty button {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+/* ---------------- 이미지 확대 ---------------- */
+
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  cursor: zoom-out;
+}
+
+#lightbox[hidden] {
+  display: none;
+}
+
+#lightbox img {
+  max-width: 95vw;
+  max-height: 95vh;
+  background: #fff;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* 편집기 안의 수식 구간 */
+.cm-math {
+  color: #0b7a55;
+}
+
+@media (prefers-color-scheme: dark) {
+  .cm-math {
+    color: #7ee0b5;
+  }
+}
