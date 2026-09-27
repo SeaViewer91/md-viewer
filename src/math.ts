@@ -1,24 +1,13 @@
 // MathJax 4 (SVG 출력) — public/vendor에 복사된 파일을 로컬에서 불러와 오프라인으로 동작
 
+import { settings, parseMacros } from './settings';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
   interface Window {
     MathJax: any;
   }
 }
-
-/** 자주 쓰는 매크로. 필요하면 여기에 추가하세요. */
-export const MACROS: Record<string, string | [string, number]> = {
-  R: '\\mathbb{R}',
-  N: '\\mathbb{N}',
-  Z: '\\mathbb{Z}',
-  E: '\\mathbb{E}',
-  argmin: '\\operatorname*{arg\\,min}',
-  argmax: '\\operatorname*{arg\\,max}',
-  norm: ['\\left\\lVert #1 \\right\\rVert', 1],
-  abs: ['\\left\\lvert #1 \\right\\rvert', 1],
-  T: '^{\\mathsf{T}}',
-};
 
 let readyPromise: Promise<void> | null = null;
 
@@ -37,7 +26,7 @@ export function loadMathJax(): Promise<void> {
         processEscapes: false,
         processEnvironments: true,
         tags: 'ams',
-        macros: MACROS,
+        macros: parseMacros(settings.macros),
         packages: { '[+]': ['mathtools'] },
       },
       svg: { fontCache: 'local' },
@@ -64,15 +53,19 @@ export function loadMathJax(): Promise<void> {
 
 let queue: Promise<void> = Promise.resolve();
 
-/** 요소 안의 수식을 조판. 호출은 순서대로 직렬 처리된다. */
-export function typeset(el: HTMLElement): Promise<void> {
+/**
+ * 주어진 수식 요소들만 조판. reset=true면 수식 번호를 1부터 다시 매긴다.
+ * 호출은 순서대로 직렬 처리된다.
+ */
+export function typesetElements(els: HTMLElement[], reset: boolean): Promise<void> {
+  if (!els.length) return queue;
   queue = queue
     .then(() => loadMathJax())
     .then(async () => {
       const MJ = window.MathJax;
-      MJ.texReset();
+      if (reset) MJ.texReset();
       MJ.typesetClear();
-      await MJ.typesetPromise([el]);
+      await MJ.typesetPromise(els);
     })
     .catch((e) => console.error('[math]', e));
   return queue;

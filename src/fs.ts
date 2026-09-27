@@ -21,6 +21,15 @@ export const writeTextFile = (path: string, content: string) =>
 export const fileMtime = (path: string) => invoke<number>('file_mtime', { path });
 export const pathKind = (path: string) => invoke<'dir' | 'file' | 'missing'>('path_kind', { path });
 export const takePendingFile = () => invoke<string | null>('take_pending_file');
+export const writeBinaryFile = (path: string, data: string) => invoke<void>('write_binary_file', { path, data });
+export const readBinaryBase64 = (path: string) => invoke<string>('read_binary_base64', { path });
+export const copyFile = (from: string, to: string) => invoke<void>('copy_file', { from, to });
+export const createFile = (path: string) => invoke<void>('create_file', { path });
+export const createDir = (path: string) => invoke<void>('create_dir', { path });
+export const renamePath = (from: string, to: string) => invoke<void>('rename_path', { from, to });
+export const trashPath = (path: string) => invoke<void>('trash_path', { path });
+export const watchDir = (path: string) => invoke<void>('watch_dir', { path });
+export const printPage = () => invoke<boolean>('print_page');
 
 /* ---------------- 경로 ---------------- */
 
@@ -63,11 +72,9 @@ function normalize(p: string): string {
 
 export const isExternalUrl = (s: string) => /^[a-z][a-z0-9+.-]*:/i.test(s) && !isWindowsPath(s);
 
-/** 마크다운 안의 이미지 src를 웹뷰가 읽을 수 있는 URL로 */
-export function toImageUrl(src: string, docDir: string | null): string {
-  if (!src || src.startsWith('data:') || src.startsWith('blob:')) return src;
-  if (/^(https?|asset):/i.test(src) || src.startsWith('http://asset.localhost')) return src;
-  if (!isTauri) return src;
+/** 문서 안의 상대/절대 경로를 절대 경로로. URL이면 null */
+export function resolveDocPath(src: string, docDir: string | null): string | null {
+  if (!src || /^(data|blob|https?|asset|mailto):/i.test(src) || src.startsWith('http://asset.localhost')) return null;
   let p = src;
   if (p.startsWith('file://')) p = p.replace(/^file:\/\/(localhost)?/, '');
   try {
@@ -77,7 +84,36 @@ export function toImageUrl(src: string, docDir: string | null): string {
   }
   p = p.split(/[?#]/)[0];
   if (/^\/[A-Za-z]:[\\/]/.test(p)) p = p.slice(1); // file:///C:/...
-  if (!docDir && !(p.startsWith('/') || isWindowsPath(p))) return src;
-  const abs = resolvePath(docDir ?? '/', p);
-  return convertFileSrc(abs);
+  if (p.startsWith('/') || isWindowsPath(p)) return resolvePath('/', p);
+  if (!docDir) return null;
+  return resolvePath(docDir, p);
 }
+
+/** 마크다운 안의 이미지 src를 웹뷰가 읽을 수 있는 URL로 */
+export function toImageUrl(src: string, docDir: string | null): string {
+  if (!isTauri) return src;
+  const abs = resolveDocPath(src, docDir);
+  return abs ? convertFileSrc(abs) : src;
+}
+
+/** from 폴더 기준 to 까지의 상대 경로 (마크다운 링크용, / 구분자) */
+export function relativePath(fromDir: string, to: string): string {
+  const split = (p: string) => p.split(/[\\/]+/).filter(Boolean);
+  const a = split(fromDir);
+  const b = split(to);
+  const win = isWindowsPath(to);
+  if (win && a[0]?.toLowerCase() !== b[0]?.toLowerCase()) return to.replace(/\\/g, '/');
+  let i = 0;
+  while (i < a.length && i < b.length && (win ? a[i].toLowerCase() === b[i].toLowerCase() : a[i] === b[i])) i++;
+  const up = a.slice(i).map(() => '..');
+  return [...up, ...b.slice(i)].join('/') || '.';
+}
+
+export function joinPath(dir: string, name: string): string {
+  const sep = isWindowsPath(dir) ? '\\' : '/';
+  return dir.replace(/[\\/]+$/, '') + sep + name;
+}
+
+export const isImagePath = (p: string) => /\.(png|jpe?g|gif|webp|svg|bmp|tiff?)$/i.test(p);
+export const isMarkdownPath = (p: string) => /\.(md|markdown|mdx|txt)$/i.test(p);
+export const extOf = (p: string) => (/\.([^.\\/]+)$/.exec(p)?.[1] ?? '').toLowerCase();

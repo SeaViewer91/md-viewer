@@ -239,6 +239,158 @@ function taskListPlugin(md: MarkdownIt) {
   });
 }
 
+
+/* ------------------------------------------------------------------ */
+/* 콜아웃: > [!NOTE] / [!TIP] / [!IMPORTANT] / [!WARNING] / [!CAUTION]    */
+/* ------------------------------------------------------------------ */
+
+const CALLOUT_TITLES: Record<string, string> = {
+  note: '참고',
+  tip: '팁',
+  important: '중요',
+  warning: '경고',
+  caution: '주의',
+};
+
+function calloutPlugin(md: MarkdownIt) {
+  md.core.ruler.after('inline', 'callout', (state: StateCore) => {
+    const tokens = state.tokens;
+    for (let i = 0; i + 2 < tokens.length; i++) {
+      if (tokens[i].type !== 'blockquote_open') continue;
+      if (tokens[i + 1].type !== 'paragraph_open' || tokens[i + 2].type !== 'inline') continue;
+      const inline = tokens[i + 2];
+      const m = /^\[!(note|tip|important|warning|caution)\][ \t]*(.*)$/im.exec(inline.content.split('\n')[0]);
+      if (!m || !inline.children?.length) continue;
+      const kind = m[1].toLowerCase();
+      const title = m[2].trim() || CALLOUT_TITLES[kind];
+      tokens[i].attrJoin('class', `callout callout-${kind}`);
+
+      // 첫 줄(마커 줄)을 inline 자식에서 제거
+      const kids = inline.children;
+      let cut = kids.findIndex((k) => k.type === 'softbreak' || k.type === 'hardbreak');
+      if (cut < 0) cut = kids.length - 1;
+      inline.children = kids.slice(cut + 1);
+
+      const head = new state.Token('html_block', '', 0);
+      head.content = `<div class="callout-title">${escapeHtml(title)}</div>\n`;
+      tokens.splice(i + 1, 0, head);
+      // 마커 줄만 있던 경우 빈 문단 제거
+      if (!inline.children.length) {
+        const pOpen = i + 2;
+        if (tokens[pOpen].type === 'paragraph_open' && tokens[pOpen + 2]?.type === 'paragraph_close') {
+          tokens.splice(pOpen, 3);
+        }
+      }
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* 그림 라벨: ![캡션](a.png){#fig:id}                                     */
+/* ------------------------------------------------------------------ */
+
+function figureLabelPlugin(md: MarkdownIt) {
+  md.core.ruler.after('inline', 'figure_label', (state: StateCore) => {
+    for (const t of state.tokens) {
+      if (t.type !== 'inline' || !t.children) continue;
+      const kids = t.children;
+      for (let j = 0; j + 1 < kids.length; j++) {
+        if (kids[j].type !== 'image' || kids[j + 1].type !== 'text') continue;
+        const m = /^\{#((?:fig):[\w:.-]+)\}/.exec(kids[j + 1].content);
+        if (!m) continue;
+        kids[j].attrSet('data-label', m[1]);
+        kids[j + 1].content = kids[j + 1].content.slice(m[0].length);
+        if (!kids[j + 1].content.trim()) kids.splice(j + 1, 1);
+      }
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* 인용: [@key], [@a; @b, p. 3], [see @key]                               */
+/* ------------------------------------------------------------------ */
+
+export interface CiteItem {
+  prefix: string;
+  key: string;
+  suffix: string;
+}
+
+function parseCitation(body: string): CiteItem[] | null {
+  const parts = body.split(';');
+  const items: CiteItem[] = [];
+  for (const part of parts) {
+    const m = /^\s*(.*?)(?<![\w.])@([\w][\w:.#$%&+?<>~/-]*)(?:\s*,\s*(.*?))?\s*$/.exec(part);
+    if (!m) return null;
+    items.push({ prefix: m[1].trim(), key: m[2].replace(/[.:]+$/, ''), suffix: (m[3] ?? '').trim() });
+  }
+  return items.length ? items : null;
+}
+
+function citationInline(state: StateInline, silent: boolean): boolean {
+  const src = state.src;
+  const pos = state.pos;
+  if (src[pos] !== '[') return false;
+  const end = src.indexOf(']', pos + 1);
+  if (end < 0) return false;
+  if (src[end + 1] === '(' || src[end + 1] === '[') return false; // 일반 링크
+  const body = src.slice(pos + 1, end);
+  if (!body.includes('@') || body.includes('\n\n')) return false;
+  const items = parseCitation(body);
+  if (!items) return false;
+  if (!silent) {
+    const t = state.push('citation', 'cite', 0);
+    t.meta = { items };
+    t.content = body;
+  }
+  state.pos = end + 1;
+  return true;
+}
+
+function citationPlugin(md: MarkdownIt) {
+  md.inline.ruler.before('link', 'citation', citationInline);
+  md.renderer.rules.citation = (tokens, idx) => {
+    const t = tokens[idx];
+    const data = escapeHtml(JSON.stringify(t.meta?.items ?? [])).replace(/"/g, '&quot;');
+    return `<cite class="cite" data-cites="${data}">[${escapeHtml(t.content)}]</cite>`;
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* 원본 전처리 (줄 수는 그대로 유지)                                        */
+/* ------------------------------------------------------------------ */
+
+export interface FrontMatter {
+  raw: string;
+  lines: number;
+}
+
+/** 맨 앞의 YAML front matter를 떼어내고, 같은 줄 수만큼 빈 줄로 채운다 */
+export function splitFrontMatter(src: string): { body: string; front: FrontMatter | null } {
+  const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(src);
+  if (!m) return { body: src, front: null };
+  const lines = m[0].split('\n').length - (m[0].endsWith('\n') ? 1 : 0);
+  return { body: '\n'.repeat(lines) + src.slice(m[0].length), front: { raw: m[1], lines } };
+}
+
+/**
+ * 표 행 안의 수식에서 | 를 \vert 로 바꿔 표 구분자로 오인되지 않게 한다.
+ * ( \| → \Vert{} , | → \vert{} )
+ */
+export function protectTablePipes(src: string): string {
+  if (!src.includes('|') || !src.includes('$')) return src;
+  return src
+    .split('\n')
+    .map((line) => {
+      if (!/^\s*\|/.test(line) || !line.includes('$')) return line;
+      return line.replace(/(\${1,2})([^$]+?)\1/g, (_all, d: string, body: string) => {
+        const fixed = body.replace(/\\\|/g, '\\Vert{}').replace(/(?<!\\)\|/g, '\\vert{}');
+        return d + fixed + d;
+      });
+    })
+    .join('\n');
+}
+
 /* ------------------------------------------------------------------ */
 
 export function createMarkdown(): MarkdownIt {
@@ -259,7 +411,14 @@ export function createMarkdown(): MarkdownIt {
     },
   });
 
-  md.use(mathPlugin).use(footnote).use(headingIdPlugin).use(taskListPlugin).use(sourceLinePlugin);
+  md.use(mathPlugin)
+    .use(citationPlugin)
+    .use(footnote)
+    .use(headingIdPlugin)
+    .use(taskListPlugin)
+    .use(calloutPlugin)
+    .use(figureLabelPlugin)
+    .use(sourceLinePlugin);
 
   // 넓은 표는 가로 스크롤
   md.renderer.rules.table_open = (tokens, idx, opts, _env, slf) =>

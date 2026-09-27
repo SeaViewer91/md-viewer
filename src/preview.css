@@ -8,20 +8,18 @@
   --md-pre-bg: #f6f8fa;
   --md-zebra: rgba(127, 127, 127, 0.06);
   --md-link: var(--accent);
-  max-width: 880px;
+  max-width: var(--preview-width, 880px);
   margin: 0 auto;
   padding: 28px 40px 50vh;
   color: var(--md-fg);
-  font-size: 16px;
+  font-size: var(--preview-font-size, 16px);
   line-height: 1.75;
   word-break: keep-all;
   overflow-wrap: break-word;
 }
 
-@media (prefers-color-scheme: dark) {
-  .markdown-body {
-    --md-pre-bg: #25272b;
-  }
+:root.dark .markdown-body {
+  --md-pre-bg: #25272b;
 }
 
 /* 화면 밖 렌더링 영역 */
@@ -272,65 +270,305 @@
   color: #82071e;
 }
 
-@media (prefers-color-scheme: dark) {
-  .hljs-comment,
-  .hljs-quote {
-    color: #8b949e;
+:root.dark .hljs-comment,
+:root.dark .hljs-quote {
+  color: #8b949e;
+}
+:root.dark .hljs-keyword,
+:root.dark .hljs-selector-tag,
+:root.dark .hljs-literal,
+:root.dark .hljs-type {
+  color: #ff7b72;
+}
+:root.dark .hljs-string,
+:root.dark .hljs-regexp,
+:root.dark .hljs-addition {
+  color: #a5d6ff;
+}
+:root.dark .hljs-number,
+:root.dark .hljs-symbol,
+:root.dark .hljs-bullet,
+:root.dark .hljs-variable,
+:root.dark .hljs-template-variable {
+  color: #79c0ff;
+}
+:root.dark .hljs-title,
+:root.dark .hljs-title.function_,
+:root.dark .hljs-section {
+  color: #d2a8ff;
+}
+:root.dark .hljs-built_in,
+:root.dark .hljs-attr,
+:root.dark .hljs-attribute,
+:root.dark .hljs-meta {
+  color: #ffa657;
+}
+:root.dark .hljs-deletion {
+  color: #ffa198;
+}
+
+/* ---------- 문서 머리말 (front matter) ---------- */
+
+.markdown-body .doc-header {
+  margin-bottom: 2em;
+  padding-bottom: 1.2em;
+  border-bottom: 1px solid var(--md-border);
+  text-align: center;
+}
+
+.markdown-body .doc-title {
+  margin: 0.4em 0 0.3em;
+  border: none;
+  font-size: 2em;
+}
+
+.markdown-body .doc-subtitle {
+  margin: 0 0 0.6em;
+  font-size: 1.15em;
+  color: var(--md-muted);
+}
+
+.markdown-body .doc-authors {
+  margin: 0.4em 0;
+  font-weight: 600;
+}
+
+.markdown-body .doc-date {
+  margin: 0.2em 0;
+  color: var(--md-muted);
+  font-size: 0.92em;
+}
+
+.markdown-body .doc-abstract {
+  margin: 1.4em auto 0;
+  max-width: 92%;
+  text-align: justify;
+  font-size: 0.94em;
+}
+
+.markdown-body .doc-abstract-label {
+  margin-bottom: 0.4em;
+  text-align: center;
+  font-weight: 700;
+}
+
+.markdown-body .doc-keywords {
+  margin: 0.8em auto 0;
+  max-width: 92%;
+  text-align: left;
+  font-size: 0.92em;
+}
+
+/* ---------- 캡션 · 참조 · 인용 ---------- */
+
+.markdown-body caption {
+  caption-side: top;
+  padding: 0 0 0.5em;
+  text-align: left;
+  font-size: 0.95em;
+  color: var(--md-muted);
+}
+
+.markdown-body .caption-label {
+  font-weight: 700;
+  color: var(--md-fg);
+}
+
+.markdown-body a.xref {
+  font-weight: 500;
+}
+
+.markdown-body a.xref-missing,
+.markdown-body .cite-missing {
+  color: #d1242f;
+  font-weight: 600;
+}
+
+.markdown-body cite.cite {
+  font-style: normal;
+}
+
+.markdown-body .references ul,
+.markdown-body .references ol {
+  padding-left: 1.6em;
+}
+
+.markdown-body .references ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.markdown-body .references ul li {
+  padding-left: 1.6em;
+  text-indent: -1.6em;
+}
+
+.markdown-body .references li {
+  margin-bottom: 0.5em;
+  font-size: 0.94em;
+  word-break: break-word;
+}
+
+.markdown-body .flash {
+  animation: flash 1.2s ease-out;
+}
+
+@keyframes flash {
+  0% {
+    background: rgba(255, 200, 0, 0.5);
   }
-  .hljs-keyword,
-  .hljs-selector-tag,
-  .hljs-literal,
-  .hljs-type {
-    color: #ff7b72;
+  100% {
+    background: transparent;
   }
-  .hljs-string,
-  .hljs-regexp,
-  .hljs-addition {
-    color: #a5d6ff;
-  }
-  .hljs-number,
-  .hljs-symbol,
-  .hljs-bullet,
-  .hljs-variable,
-  .hljs-template-variable {
-    color: #79c0ff;
-  }
-  .hljs-title,
-  .hljs-title.function_,
-  .hljs-section {
-    color: #d2a8ff;
-  }
-  .hljs-built_in,
-  .hljs-attr,
-  .hljs-attribute,
-  .hljs-meta {
-    color: #ffa657;
-  }
-  .hljs-deletion {
-    color: #ffa198;
-  }
+}
+
+/* ---------- 콜아웃 ---------- */
+
+.markdown-body blockquote.callout {
+  --c: #0969da;
+  padding: 0.6em 1em;
+  color: var(--md-fg);
+  border-left: 4px solid var(--c);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--c) 8%, transparent);
+}
+
+.markdown-body blockquote.callout > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body .callout-title {
+  margin-bottom: 0.3em;
+  font-weight: 700;
+  color: var(--c);
+}
+
+.markdown-body .callout-tip {
+  --c: #1a7f37;
+}
+
+.markdown-body .callout-important {
+  --c: #8250df;
+}
+
+.markdown-body .callout-warning {
+  --c: #9a6700;
+}
+
+.markdown-body .callout-caution {
+  --c: #cf222e;
+}
+
+:root.dark .markdown-body .callout-note {
+  --c: #58a6ff;
+}
+
+:root.dark .markdown-body .callout-tip {
+  --c: #3fb950;
+}
+
+:root.dark .markdown-body .callout-important {
+  --c: #a371f7;
+}
+
+:root.dark .markdown-body .callout-warning {
+  --c: #d29922;
+}
+
+:root.dark .markdown-body .callout-caution {
+  --c: #f85149;
+}
+
+/* ---------- Mermaid ---------- */
+
+.markdown-body .mermaid-block {
+  margin: 0 0 1em;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.markdown-body .mermaid-block svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body .mermaid-error {
+  padding: 10px 14px;
+  border: 1px solid #d1242f;
+  border-radius: 6px;
+  color: #d1242f;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  text-align: left;
+  white-space: pre-wrap;
 }
 
 /* ---------- 인쇄 / PDF ---------- */
 
 @media print {
-  #toolbar,
-  #sidebar,
-  .gutter,
-  #editor-pane {
-    display: none !important;
-  }
-  html,
-  body,
-  #app,
-  #main,
-  #preview-pane,
-  #preview-scroll {
-    height: auto !important;
-    overflow: visible !important;
-  }
-  .markdown-body {
-    padding: 0;
+  .markdown-body,
+  :root.dark .markdown-body {
+    --md-pre-bg: #f6f8fa;
+    --md-code-bg: rgba(127, 127, 127, 0.12);
     max-width: none;
+    padding: 0;
+    font-size: 11pt;
+    color: #000;
   }
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3 {
+    break-after: avoid;
+  }
+  .markdown-body figure,
+  .markdown-body pre,
+  .markdown-body table,
+  .markdown-body .math-block,
+  .markdown-body .mermaid-block {
+    break-inside: avoid;
+  }
+  .markdown-body .table-wrap,
+  .markdown-body .math-block {
+    overflow: visible;
+  }
+  :root.dark .hljs-comment,
+  :root.dark .hljs-quote {
+    color: #6a737d;
+  }
+  :root.dark .hljs-keyword,
+  :root.dark .hljs-selector-tag,
+  :root.dark .hljs-literal,
+  :root.dark .hljs-type {
+    color: #cf222e;
+  }
+  :root.dark .hljs-string,
+  :root.dark .hljs-regexp,
+  :root.dark .hljs-addition {
+    color: #0a3069;
+  }
+  :root.dark .hljs-number,
+  :root.dark .hljs-symbol,
+  :root.dark .hljs-bullet,
+  :root.dark .hljs-variable,
+  :root.dark .hljs-template-variable {
+    color: #0550ae;
+  }
+  :root.dark .hljs-title,
+  :root.dark .hljs-title.function_,
+  :root.dark .hljs-section {
+    color: #8250df;
+  }
+  :root.dark .hljs-built_in,
+  :root.dark .hljs-attr,
+  :root.dark .hljs-attribute,
+  :root.dark .hljs-meta {
+    color: #953800;
+  }
+}
+
+/* 수식 번호 참조 \eqref 링크 색 */
+.markdown-body mjx-container a,
+.markdown-body mjx-container [href] {
+  color: var(--md-link);
+  fill: var(--md-link);
 }
